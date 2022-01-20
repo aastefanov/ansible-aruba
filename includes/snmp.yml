@@ -1,0 +1,19 @@
+- name: Set SNMP Properties
+  arubaoss_snmp:
+    contact: "{{contact}}"
+    location: "{{location}}"
+    use_oobm: "{{ snmp.oobm | default(omit) }}"
+
+- name: Add SNMP Communities
+  arubaoss_snmp:
+    community_name: "{{item.name}}"
+    restricted: "{{ item.restricted | default(omit) }}"
+    access_type: "{{ item.level | default(omit) }}"
+  loop: "{{ snmp.communities }}"
+
+- name: Add SNMP Trap Hosts
+  arubaoss_snmp:
+    host_ip: "{{item.host}}"
+    community_name: "{{item.community}}"
+    trap_level: "{{item.level}}"
+  loop: "{{ snmp.traps }}"

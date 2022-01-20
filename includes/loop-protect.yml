@@ -1,0 +1,21 @@
+- name: Set Loop Protect Properties
+  arubaoss_loop_protect:
+    command: update
+    port_disable_timer: "{{loop.timer | default(omit) }}"
+    trap: "{{ loop.trap | default(omit) }}"
+    mode: "{{ loop.mode | default(omit) }}"
+
+- name: Set Loop Protect on Ports
+  arubaoss_loop_protect:
+    command: update_port
+    interface: "{{ item.port_id }}"
+    loop_protected: "{{ item.loop_protect }}"
+  loop: "{{ loop_protect_ports_diff }}"
+
+- name: Set Loop Protect on VLANs
+  arubaoss_loop_protect:
+    command: update_vlan
+    vlan: "{{ item.vlan_id }}"
+    loop_protected: "{{ item.loop_protect }}"
+  loop: "{{ loop_protect_vlans_diff }}"
+

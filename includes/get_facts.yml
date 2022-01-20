@@ -1,0 +1,74 @@
+- name: Get running configuration
+  arubaoss_facts:
+    gather_subset: host_system_info
+    gather_network_resources: [vlans, interfaces, vlans_ports, loop_protect_status, loop_protect_ports, loop_protect_vlans]
+  register: sw_config
+
+- name: Initialize configuration variables
+  set_fact:
+    sw_vlans: "{{ sw_config.ansible_facts.ansible_network_resources.vlans.vlan_element }}"
+    sw_ports: "{{ sw_config.ansible_facts.ansible_network_resources.interfaces.port_element }}"
+    sw_vlan_ports: "{{ sw_config.ansible_facts.ansible_network_resources.vlans_ports.vlan_port_element }}"
+    vlan_ports_to_delete: []
+    vlan_ports_to_create: []
+    loop_protect_ports_diff: []
+    loop_protect_vlans_diff: []
+    port_diff: []
+    vlans_to_delete: []
+    sw_loop_protect_status: "{{ sw_config.ansible_facts.ansible_network_resources.loop_protect_status }}"
+    sw_loop_protect_ports: "{{ sw_config.ansible_facts.ansible_network_resources.loop_protect_ports.loop_protect_port_element }}"
+    sw_loop_protect_vlans: "{{ sw_config.ansible_facts.ansible_network_resources.loop_protect_vlans.loop_protect_vlan_element }}"
+
+- name: Load VLANs from host variables
+  set_fact:
+    vlans_by_name: "{{ lookup('template', './includes/helpers/vlans_by_name.yml.j2') | from_yaml }}"
+    vlans_by_id: "{{ lookup('template', './includes/helpers/vlans_by_id.yml.j2') | from_yaml }}"
+
+- name: Load VLAN-Port mappings from host variables
+  set_fact:
+    vlan_ports: "{{ lookup('template', './includes/helpers/vlan_ports.yml.j2') | from_yaml }}"
+
+- name: Mark VLAN-Port mappings for deletion
+  set_fact:
+    vlan_ports_to_delete: "{{ (vlan_ports_to_delete | default([])) + [item] }}"
+  loop: "{{ sw_vlan_ports }}"
+  when: vlan_ports | selectattr('uri', '==', item.uri) | selectattr('port_mode', '==', item.port_mode) | list | length == 0
+  loop_control:
+    label: "VLAN {{item.vlan_id}} on port {{item.port_id}} as {{item.port_mode}}"
+- name: Mark VLAN-Port mappings for creation
+  set_fact:
+    vlan_ports_to_create: "{{ (vlan_ports_to_create | default([])) + [item] }}"
+  loop: "{{ vlan_ports }}"
+  when: sw_vlan_ports | selectattr('vlan_id', '==', item.vlan_id | int) | selectattr('port_id', '==', item.port_id | string) | selectattr('port_mode', '==', item.port_mode) | list | length == 0
+  loop_control:
+    label: "VLAN {{item.vlan_id}} on port {{item.port_id}} as {{item.port_mode}}"
+
+- name: Mark ports for edit
+  set_fact:
+    port_diff: "{{ (port_diff | default([])) + [item] }}"
+  loop: "{{ ports | dict2items }}"
+  when: sw_ports | selectattr('id', '==', item.key | string) | selectattr('is_port_enabled', '==', (item.value.active | default(true))) | selectattr('name', '==', item.value.description if 'description' in item.value else '') | list | length == 0
+
+- name: Mark VLANs for deletion
+  set_fact:
+    vlans_to_delete: "{{ (vlans_to_delete | default([])) + [item] }}"
+  loop: "{{ sw_vlans }}"
+  when: vlans | dict2items | selectattr('key', '==', (item.vlan_id | int)) | list | length == 0
+  loop_control:
+    label: "{{ item.vlan_id }}"
+
+- name: Mark Loop Protect on Ports for change
+  set_fact:
+    loop_protect_ports_diff: "{{ (loop_protect_ports_diff | default([])) + [{'port_id': item.key, 'loop_protect': item.value.loop_protect | default(loop.default_port) | default(false)}] }}"
+  loop: "{{ ports | dict2items }}"
+  when: sw_loop_protect_ports | selectattr('port_id', '==', item.key | string) | selectattr('is_loop_protection_enabled', '==', (item.value.loop_protect | default(loop.default_port)) | default(false)) | list | length == 0
+  loop_control:
+    label: "{{ item.key }} - Protected: {{ item.value.loop_protect | default(loop.default_port) }}"
+
+- name: Mark Loop Protect on VLANs for change
+  set_fact:
+    loop_protect_vlans_diff: "{{ (loop_protect_vlans_diff | default([])) + [{'vlan_id': item.key, 'loop_protect': item.value.loop_protect | default(loop.default_vlan) | default(false)}] }}"
+  loop: "{{ vlans | dict2items }}"
+  when: sw_loop_protect_vlans | selectattr('vlan_id', '==', item.key | int) | selectattr('is_vlan_loop_protected', '==', (item.value.loop_protect | default(loop.default_vlan)) | default(false)) | list | length == 0
+  loop_control:
+    label: "{{ item.key }} - Protected: {{ item.value.loop_protect | default(loop.default_vlan) }}"

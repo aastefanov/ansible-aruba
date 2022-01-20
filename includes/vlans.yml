@@ -1,0 +1,38 @@
+- name: Create VLANs
+  arubaoss_vlan:
+    config: create
+    command: config_vlan
+    vlan_id: "{{ item.key }}"
+    name: "{{ item.value | default(omit) }}"
+    status: "VS_PORT_BASED"
+    vlantype: "VT_STATIC"
+    ip_address_mode: "{{ vlans[item.key].ip_address_mode | default('IAAM_DISABLED') }}"
+    vlan_ip_address: "{{ vlans[item.key].ip_address | default(omit) }}"
+    vlan_ip_mask: "{{ vlans[item.key].mask | default(omit) }}"
+    is_management_vlan: "{{ vlans[item.key].management | default(omit) }}"
+  loop: "{{ vlans_by_id | dict2items }}"
+
+- name: Assign Marked VLAN memberships
+  arubaoss_vlan:
+    config: create
+    command: config_vlan_port
+    port_id: "{{ item.port_id }}"
+    vlan_id: "{{ item.vlan_id }}"
+    port_mode: "{{ item.port_mode }}"
+  loop: "{{ vlan_ports_to_create }}"
+
+- name: Delete Marked VLAN memberships
+  arubaoss_vlan:
+    config: delete
+    command: config_vlan_port
+    port_id: "{{ item.port_id }}"
+    vlan_id: "{{ item.vlan_id }}"
+  loop: "{{ vlan_ports_to_delete }}"
+
+- name: Delete Marked VLANs
+  arubaoss_vlan:
+    config: delete
+    command: config_vlan
+    vlan_id: "{{ item.vlan_id }}"
+  loop: "{{ vlans_to_delete }}"
+

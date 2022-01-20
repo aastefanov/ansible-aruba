@@ -1,0 +1,19 @@
+{% for port in ports | dict2items %}
+- port_id: "{{ port.key }}"
+  port_mode: "POM_UNTAGGED"
+{% if 'native_vlan' in port.value %}
+  vlan_id: "{{ vlans_by_name[port.value.native_vlan] | int }}"
+  uri: "/vlans-ports/{{vlans_by_name[port.value.native_vlan]}}-{{port.key}}"
+{% else %}
+  vlan_id: "{{ vlans_by_name[blackhole_vlan] | int }}"
+  uri: "/vlans-ports/{{vlans_by_name[blackhole_vlan]}}-{{port.key}}"
+{% endif %}
+{% if 'tagged_vlans' in port.value %}
+{% for vlan in (port.value.tagged_vlans if port.value.tagged_vlans is iterable and port.value.tagged_vlans is not string else [port.value.tagged_vlans]) %}
+- port_id: "{{ port.key }}"
+  vlan_id: "{{ vlans_by_name[vlan] | int }}"
+  port_mode: "POM_TAGGED_STATIC"
+  uri: "/vlans-ports/{{vlans_by_name[vlan]}}-{{port.key}}"
+{% endfor %}
+{% endif %}
+{% endfor %}

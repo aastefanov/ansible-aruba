@@ -1,0 +1,8 @@
+- name: Configure interface description and status
+  arubaoss_interface:
+    interface: "{{ item.key }}"
+    description: "{{ item.value.description | default('') }}"
+    admin_stat: "{{ item.value.active | default(true) }}"
+  loop: "{{ port_diff }}"
+  loop_control:
+    label: "Port {{item.key}} ({{item.value.description | default('N/A')}}) - Active: {{item.value.active |default(true)}}"

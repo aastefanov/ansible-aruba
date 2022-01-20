@@ -1,0 +1,12 @@
+{% for item in vlans | dict2items %}
+{%if item.value is string %}
+{{ item.key }}: {{item.value}}
+{% else %}
+{%if item.value.name is defined %}
+{{ item.key }}: {{item.value.name}}
+{% else %}
+{{ item.key }}:
+{%endif%}
+{%endif%}
+{%endfor%}
+

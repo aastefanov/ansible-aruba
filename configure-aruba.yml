@@ -1,0 +1,14 @@
+---
+- hosts: "{{ run_hosts }}"
+  collections:
+    - arubanetworks.aos_switch
+  tasks:
+    - import_tasks: includes/get_facts.yml
+    - import_tasks: includes/interfaces.yml
+    - import_tasks: includes/vlans.yml
+    - import_tasks: includes/loop-protect.yml
+    - import_tasks: includes/snmp.yml
+    - import_tasks: includes/ntp.yml
+    - import_tasks: includes/host-attributes.yml
+
+

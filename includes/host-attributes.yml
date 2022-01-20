@@ -1,0 +1,11 @@
+- name: Set Host Properties
+  arubaoss_system_attributes:
+    hostname: "{{ hostname | default(omit) }}"
+    location: "{{ location | default(omit) }}"
+    contact: "{{ contact | default(omit) }}"
+    domain_name: "{{ domain | default(omit) }}"
+    default_gateway_ip: "{{uplink.gateway | default(omit) }}"
+
+- name: Allow unsupported transceivers (via CLI)
+  arubaoss_anycli:
+    command: "allow-unsupported-transceiver"

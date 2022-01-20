@@ -1,0 +1,31 @@
+- name: Configure SNTP Server
+  arubaoss_sntp:
+    config: create
+    command: config_sntp_priority
+    sntp_server_priority: 1
+    version: IAV_IP_V4
+    sntp_ip_address: "{{ sntp_server }}"
+  ignore_errors: yes
+
+- name: Enable SNTP
+  arubaoss_sntp:
+    config: create
+    command: config_sntp
+    sntp_client_operation_mode: "SNTP_UNICAST_MODE"
+
+# - name: Set timesync to SNTP
+#   arubaoss_ntp:
+#     config: create
+#     command: config_timesync
+#     timesyncType: sntp
+
+- name: Set timesync to SNTP (CLI workaround)
+  arubaoss_anycli:
+    command: "timesync sntp"
+
+- name: Set timezone and DST (via CLI)
+  arubaoss_anycli:
+    command: "{{ item }}"
+  loop:
+    - "time daylight-time-rule middle-europe-and-portugal"
+    - "time timezone 120"
